@@ -1,0 +1,23 @@
+# How to install Live 2D SDK
+1. Download Live 2D CubismSdkForNative
+2. Rename SDK to CubismSdkForNative
+
+
+You can see the project tree as:
+
+```
+Nodoka
+ +
+ +-> src
+ |
+ |
+ +-> vendor
+ |
+ +----->CubismSdkForNative
+         +
+         +-> Core
+         |
+         +-> Framework
+
+```
+
