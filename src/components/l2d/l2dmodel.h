@@ -8,6 +8,8 @@
 #include <Model/CubismUserModel.hpp>
 #include <CubismModelSettingJson.hpp>
 #include <QDir>
+#include <QSize>
+#include <QOpenGLTexture>
 
 using namespace Live2D::Cubism::Framework;
 
@@ -20,10 +22,15 @@ private:
 
     std::unique_ptr<Csm::CubismModelSettingJson> mModelSettingJson;
 
+    std::map<int, std::shared_ptr<QOpenGLTexture>> mTextureMap;
+    std::shared_ptr<QOpenGLTexture> createTextureFromFilePath(const QString &filePath);
+    void releaseTexture();
 public:
     L2DModel(const QString &model3JsonFilePath);
+    virtual ~L2DModel();
 
     void loadAsset();
+    void setMVPMatrixWithSize(const QSize &size);
 };
 
 }

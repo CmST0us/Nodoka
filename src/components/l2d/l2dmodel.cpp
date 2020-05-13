@@ -3,7 +3,8 @@
 #include <QDir>
 #include <QFile>
 #include <QByteArray>
-
+#include <QImage>
+#include <Rendering/OpenGL/CubismRenderer_OpenGLES2.hpp>
 #include "l2dmodel.h"
 
 using namespace Nodoka;
@@ -23,7 +24,14 @@ using namespace Nodoka;
  *      expressions
  *          xxx.exp3.json
  *
+ * --------------------------------
+ * An Model should manager its own texture, so when distory model, the texture
+ * should be release, too.
  */
+
+L2DModel::~L2DModel() {
+    this->releaseTexture();
+}
 
 L2DModel::L2DModel(const QString &model3JsonFilePath) {
     QString dirPath = model3JsonFilePath.section("/", 0, -2);
@@ -41,6 +49,19 @@ L2DModel::L2DModel(const QString &model3JsonFilePath) {
 
 void L2DModel::loadAsset() {
     /// Load Model
+    QString modelFileName(this->mModelSettingJson->GetModelFileName());
+    if (modelFileName.length() > 0) {
+        /// Has model file
+        QString modelFilePath = this->mModelRootDir.filePath(modelFileName);
+        QFile modelFile(modelFilePath);
+        if (modelFile.open(QFile::ReadOnly)) {
+            QByteArray data = modelFile.readAll();
+            this->LoadModel((const Csm::csmByte *)data.data(), (Csm::csmSizeInt)data.length());
+            Csm::csmMap<Csm::csmString, Csm::csmFloat32> layout;
+            this->mModelSettingJson->GetLayoutMap(layout);
+            this->GetModelMatrix()->SetupFromLayout(layout);
+        }
+    }
 
     /// Load Pose
 
@@ -48,7 +69,40 @@ void L2DModel::loadAsset() {
 
     /// Load Physics
 
-    /// Create Render
-
     /// Load Texture
+    this->CreateRenderer();
+
+    /// Create Render
+    Csm::csmInt32 textureCount = this->mModelSettingJson->GetTextureCount();
+    for (int i = 0; i < textureCount; ++i) {
+        QString textureFileName(this->mModelSettingJson->GetTextureFileName(i));
+        QString textureFilePath = this->mModelRootDir.filePath(textureFileName);
+        /// Create texture from file
+        auto texture = this->createTextureFromFilePath(textureFilePath);
+        this->mTextureMap[i] = texture;
+        this->GetRenderer<Csm::Rendering::CubismRenderer_OpenGLES2>()->BindTexture(i, texture->textureId());
+    }
+}
+
+void L2DModel::setMVPMatrixWithSize(const QSize &size) {
+    Csm::CubismMatrix44 projectionMatrix;
+    float radio = size.height() / size.width();
+    projectionMatrix.Scale(size.height() / size.width() * radio, 1 * radio);
+    projectionMatrix.TransformY(-0.4);
+    projectionMatrix.MultiplyByMatrix(this->GetModelMatrix());
+    this->GetRenderer<Csm::Rendering::CubismRenderer_OpenGLES2>()->SetMvpMatrix(&projectionMatrix);
+}
+
+void L2DModel::releaseTexture() {
+    auto textureCount = this->mModelSettingJson->GetTextureCount();
+    auto map = this->GetRenderer<Csm::Rendering::CubismRenderer_OpenGLES2>()->GetBindedTextures();
+    for (Csm::csmInt32 i = 0; i < textureCount; ++i) {
+        this->mTextureMap.erase(i);
+    }
+}
+
+std::shared_ptr<QOpenGLTexture> L2DModel::createTextureFromFilePath(const QString &filePath) {
+    QImage textureImage(filePath);
+    std::shared_ptr<QOpenGLTexture> texture(new QOpenGLTexture(textureImage));
+    return texture;
 }
