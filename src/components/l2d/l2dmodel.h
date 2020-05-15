@@ -30,7 +30,7 @@ public:
     virtual ~L2DModel();
 
     void loadAsset();
-    void setMVPMatrixWithSize(const QSize &size);
+    void setMVPMatrixWithSize(const QSize &size, float userScale = 1);
 };
 
 }

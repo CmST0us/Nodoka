@@ -84,11 +84,16 @@ void L2DModel::loadAsset() {
     }
 }
 
-void L2DModel::setMVPMatrixWithSize(const QSize &size) {
+void L2DModel::setMVPMatrixWithSize(const QSize &size, float userScale) {
     Csm::CubismMatrix44 projectionMatrix;
-    float radio = size.height() / size.width();
-    projectionMatrix.Scale(size.height() / size.width() * radio, 1 * radio);
-    projectionMatrix.TransformY(-0.4);
+    float w = size.width();
+    float h = size.height();
+    float ratio = w / h;
+    if (ratio > 1) {
+        projectionMatrix.Scale(1 * userScale, ratio * userScale);
+    } else {
+        projectionMatrix.Scale(1 / ratio * userScale, 1 * userScale);
+    }
     projectionMatrix.MultiplyByMatrix(this->GetModelMatrix());
     this->GetRenderer<Csm::Rendering::CubismRenderer_OpenGLES2>()->SetMvpMatrix(&projectionMatrix);
 }
@@ -104,5 +109,7 @@ void L2DModel::releaseTexture() {
 std::shared_ptr<QOpenGLTexture> L2DModel::createTextureFromFilePath(const QString &filePath) {
     QImage textureImage(filePath);
     std::shared_ptr<QOpenGLTexture> texture(new QOpenGLTexture(textureImage));
+    texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+    texture->setMagnificationFilter(QOpenGLTexture::Linear);
     return texture;
 }
